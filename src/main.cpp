@@ -350,7 +350,7 @@ int main() {
           	double x_add_on = 0;
           	
           	//Fill out the path planner by adding points to the rest of the prev path... we are allways gonna get 50 points
-          	for(int i =0; i<= 50 - previous_path_x.size(); i++)
+          	for(int i =1; i<= 50 - previous_path_x.size(); i++)
           	{
           	  double N = (target_dist/(.02*ref_vel/2.24));
           	  double x_point = x_add_on+(target_x)/N;
@@ -363,7 +363,7 @@ int main() {
           	  
           	  //rotate back to normal
           	  x_point = (x_ref*cos(ref_yaw)-y_ref*sin(ref_yaw));
-          	  x_point = (x_ref*sin(ref_yaw)+y_ref*cos(ref_yaw));
+          	  y_point = (x_ref*sin(ref_yaw)+y_ref*cos(ref_yaw));
           	  
           	  x_point += ref_x;
           	  y_point += ref_y;
