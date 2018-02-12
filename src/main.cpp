@@ -279,6 +279,12 @@ int main() {
           	      //ref_vel = 29.5; //mph
           	      too_close = true; //flag so that if I'm too close instead of reduce to a constant speed I adapt it
           	      
+          	      //basic lane change
+          	      if(lane > 0) //remember that we started at lane = 1
+          	      {
+          	        lane = 0;
+          	      }
+          	      
           	    }
           	  }
           	}
