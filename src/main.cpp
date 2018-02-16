@@ -203,12 +203,14 @@ int main() {
   
   //start in lane 1
   int lane = 1;
+  int prev_lane = lane;
+ 
   
   //target reference velocity
   //double ref_vel = 49.5;  //mph
   double ref_vel = 0;  //mph.. to avoid sudden acceleration at the begining
 
-  h.onMessage([&ref_vel,&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy,&lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&ref_vel,&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy,&lane,&prev_lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -254,51 +256,247 @@ int main() {
           	  car_s = end_path_s;
           	}
           	
-          	bool too_close = false;
+
+          	bool too_close = false;          	
+         	bool eval_ln_change = false;
+         	
+
           	
-          	//find ref_y to use
-          	for(int i = 0; i < sensor_fusion.size(); i++)
-          	{
+          	
+          	//Go through sensor fusion and see if collision is inminent
+         	for(int i = 0; i < sensor_fusion.size(); i++)
+         	{
           	  //car is in my lane
-          	  float d = sensor_fusion[i][6];
-          	  if(d< (2+4*lane+2) && d > (2+4*lane-2))
-          	  {
-          	    double vx = sensor_fusion[i][3];
-          	    double vy = sensor_fusion[i][4];
-          	    double check_speed = sqrt(vx*vx + vy*vy);
-          	    double check_car_s = sensor_fusion[i][5];
+         	  float d = sensor_fusion[i][6];
+         	  if(d< (2+4*lane+2) && d > (2+4*lane-2))
+         	  {
+         	    double vx = sensor_fusion[i][3];
+         	    double vy = sensor_fusion[i][4];
+         	    double check_speed = sqrt(vx*vx + vy*vy);
+         	    double check_car_s = sensor_fusion[i][5];
           	    
-          	    check_car_s += ((double)prev_size*.02*check_speed); //if using previous points can project s value out
+        	    check_car_s += ((double)prev_size*.02*check_speed); //if using previous points can project s value out
+          	    
+          	    double gap_s = check_car_s - car_s;
           	    
           	    //check s values greater than mine and s gap
-          	    if((check_car_s > car_s) && ((check_car_s-car_s) < 30))
+        	    //if((check_car_s > car_s) && ((check_car_s-car_s) < 30))
+        	    if((gap_s > 0.0) && (gap_s < 30.0))
+        	    {
+          	    
+         	      too_close = true; //flag so that if I'm too close instead of reduce to a constant speed I adapt it
+          	    
+          	      //raise a flag to evaluate if I should change lanes
+           	      eval_ln_change = true;
+          	  
+ 
+          	    } //end if
+          	  }  //end if
+          	}  //end for
+          	
+          	//If I have to evaluate change lanes
+          	if(eval_ln_change == true)
+          	{
+          	
+          	  //State: Keep (-1); Change_0 (0); Change_1 (1); Change_2 (2)
+         	  int change_state = -1;
+          	
+          	  //I have to check again the sensor fusion
+          	  for(int i = 0; i < sensor_fusion.size(); i++)
+         	  {
+          	    float d = sensor_fusion[i][6];
+
+          	    //if I am in lane 0 I can only go to lane 1 or stay
+          	    if(lane == 0)
+          	    {
+          	      //If there are vehicles in lane 1 I have to see the gap
+          	      if(d< (2+4*(lane+1)+2) && d > (2+4*(lane+1)-2))
+          	      {
+          	         std::cout << "In lane_0, check lane_1 " << std::endl;
+          	         double vx = sensor_fusion[i][3];
+         	         double vy = sensor_fusion[i][4];
+         	         double check_speed = sqrt(vx*vx + vy*vy);
+         	         double check_car_s = sensor_fusion[i][5];
+          	    
+        	         check_car_s += ((double)prev_size*.02*check_speed); //if using previous points can project s value out
+          	         
+          	         double gap_s = check_car_s - car_s;
+          	         //check the gap
+        	         if((gap_s > -10.0) && (gap_s < 30.0))
+        	         {
+        	            //I can change to lane 1
+                        std::cout << "Change from 0 to 1" << std::endl;
+                        change_state = 1;
+        	         }
+        	         //else I stay....
+        	         else
+        	         {
+        	            std::cout << "Stay in lane 0" << std::endl;
+        	            change_state = -1;
+        	         }
+          	      
+          	      }  //end if
+          	  
+          	    }  //end if lane 0
+          	    
+          	    //If I am in lane 1, I can go to 0 , to 2, or stay
+          	    else if(lane == 1)
           	    {
           	    
+          	       //Go to lane 0 if possible
+          	       //See if there are vehicles in lane 0
+          	       if(d< (2+4*(lane-1)+2) && d > (2+4*(lane-1)-2))
+          	       {
+          	        
+          	         std::cout << "In lane_1, check lane_0 " << std::endl;
+          	         double vx = sensor_fusion[i][3];
+         	         double vy = sensor_fusion[i][4];
+         	         double check_speed = sqrt(vx*vx + vy*vy);
+         	         double check_car_s = sensor_fusion[i][5];
           	    
-          	      //Do some logic here, lower reference velocity so we don't crsh into the car in front of us, could also flag to try to change lanes
-          	      //ref_vel = 29.5; //mph
-          	      too_close = true; //flag so that if I'm too close instead of reduce to a constant speed I adapt it
-          	      
-          	      //basic lane change
-          	      if(lane > 0) //remember that we started at lane = 1
-          	      {
-          	        lane = 0;
-          	      }
-          	      
-          	    }
-          	  }
-          	}
+        	         check_car_s += ((double)prev_size*.02*check_speed); //if using previous points can project s value out
+          	          
+          	         double gap_s = check_car_s - car_s;
+          	         
+          	         //check the gap
+        	         if((gap_s > -10.0) && (gap_s < 30.0))
+        	         {
+        	           //I can change to lane 1
+                       std::cout << "Change from 1 to 0" << std::endl;
+                       change_state = 0;
+        	         }
+        	         //else I stay....
+        	         else
+        	         {
+        	           std::cout << "Check lane 2" << std::endl;
+        	         }
+          	                 	        
+          	        } //end if
+          	        
+          	        //Else check lane 2
+          	        else if(d< (2+4*(lane+1)+2) && d > (2+4*(lane+1)-2)) 
+          	        {
+          	          std::cout << "In lane_1, check lane_2 " << std::endl;
+          	          double vx = sensor_fusion[i][3];
+         	          double vy = sensor_fusion[i][4];
+         	          double check_speed = sqrt(vx*vx + vy*vy);
+         	          double check_car_s = sensor_fusion[i][5];
+          	    
+        	          check_car_s += ((double)prev_size*.02*check_speed); //if using previous points can project s value out
+          	          
+          	          double gap_s = check_car_s - car_s;
+          	          
+          	          //check the gap
+        	          if((gap_s > -10.0) && (gap_s < 30.0))
+        	          {
+        	            //I can change to lane 1
+                        std::cout << "Change from 1 to 2" << std::endl;
+                        change_state = 2;
+        	          }
+        	          //else I stay....
+        	          else
+        	          {
+        	            std::cout << "Stay in lane 1" << std::endl;
+        	            change_state = -1;
+        	          }
+          	        }  //end else if
+          	     } //end if lan 1
+          	     
+          	     //If I am in lane 2
+          	     else if(lane == 2)
+          	     {
+          	        //See if I can go to lane 1
+          	        if(d< (2+4*(lane-1)+2) && d > (2+4*(lane-1)-2))
+          	        {
+          	          std::cout << "In lane_2, check lane_1 " << std::endl;
+          	          double vx = sensor_fusion[i][3];
+         	          double vy = sensor_fusion[i][4];
+         	          double check_speed = sqrt(vx*vx + vy*vy);
+         	          double check_car_s = sensor_fusion[i][5];
+          	    
+        	          check_car_s += ((double)prev_size*.02*check_speed); //if using previous points can project s value out
+          	          
+          	          double gap_s = check_car_s - car_s;
+          	          
+          	          //check the gap
+        	          if((gap_s > -10.0) && (gap_s < 30.0))
+        	          {
+        	            //I can change to lane 1
+                        std::cout << "Change from 2 to 1" << std::endl;
+                        change_state = 1;
+        	          }
+        	          //else I stay....
+        	          else
+        	          {
+        	            std::cout << "Stay in lane 2" << std::endl;
+        	            change_state = -1;
+        	          }
+          	        } //end if
+          	        
+          	        
+          	      } //end if lane 2
+
+          	    
+          	    }  //end for sensor fusion
+          	    
+          	    
+          	    prev_lane = lane;
+          	    //See what state I am to change lane
+  				if (lane == 0)
+  				{
+  			      if (change_state == 1)
+  				  {
+				    lane = 1;
+
+  				  } 
+  				  //else stay... do nothing
+  				}
+  				else if(lane == 1)
+  				{
+  				  if (change_state == 0)
+  				  {	
+  				    lane = 0;
+
+  				  }
+  				  else if (change_state == 2)
+  				  {	
+  				    lane = 2;
+
+  				  }
+  				  //else stay... do nothing
+  				}
+  				else if(lane == 2)
+  				{
+  				  if (change_state ==1)
+  				  {
+  				    lane = 1;
+
+  				  }
+  					
+  					//else stay... do nothing
+  				}
+  				
+  				//last:
+  				eval_ln_change = false;
+  				//change_state = -1;
+  				//potential_lane_change = false;
+  				cout << "From lane_" << prev_lane << ", Set to lane_" << lane << endl;
+          	    
+          	}  //end eval ln change
           	
+         	
           	//I adapt the speed if I am close to collision or not.
-          	if(too_close)
-          	{
+        	if(too_close)
+         	{
           	  ref_vel -= .224;
-          	}
-          	else if(ref_vel < 49.5)
-          	{
-          	  ref_vel += .224;
-          	}
+         	}
+        	else if(ref_vel < 49.5)
+         	{
+        	  ref_vel += .224;
+        	}
+        	too_close = false;
           	
+
 
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
@@ -350,7 +548,7 @@ int main() {
           	  ptsy.push_back(ref_y);
           	  
           	}
-          	
+          	//std::cout << "Calculate spline to lane: " << lane << std::endl;
           	//The other waypoints...instead of one I add 3...
           	//In Frenet add evenly 30m spaced points ahead of the starting reference
           	vector<double> next_wp0 = getXY(car_s + 30, (2 + 4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
