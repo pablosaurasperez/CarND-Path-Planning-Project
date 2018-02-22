@@ -298,9 +298,12 @@ int main() {
           	if(eval_ln_change == true)
           	{
           	
-          	  //State: Keep (-1); Change_0 (0); Change_1 (1); Change_2 (2)
-         	  int change_state = -1;
-          	
+          	  //If I am driving in a lane and evaluate lane change
+          	  //If I see obstacles on the other lanes... I keep the lane
+         	  int keep_0 = 0;  
+         	  int keep_10 = 0; //case I am in lane 1 and evaluate change to 0
+         	  int keep_12 = 0; //case I am in lane 1 and evaluate change to 2 
+          	  int keep_2 = 0;
           	  //I have to check again the sensor fusion
           	  for(int i = 0; i < sensor_fusion.size(); i++)
          	  {
@@ -312,7 +315,7 @@ int main() {
           	      //If there are vehicles in lane 1 I have to see the gap
           	      if(d< (2+4*(lane+1)+2) && d > (2+4*(lane+1)-2))
           	      {
-          	         std::cout << "In lane_0, check lane_1 " << std::endl;
+          	         std::cout << "In lane 0. Check lane 1 " << std::endl;
           	         double vx = sensor_fusion[i][3];
          	         double vy = sensor_fusion[i][4];
          	         double check_speed = sqrt(vx*vx + vy*vy);
@@ -324,15 +327,9 @@ int main() {
           	         //check the gap
         	         if((gap_s > -10.0) && (gap_s < 30.0))
         	         {
-        	            //I can change to lane 1
-                        std::cout << "Change from 0 to 1" << std::endl;
-                        change_state = 1;
-        	         }
-        	         //else I stay....
-        	         else
-        	         {
-        	            std::cout << "Stay in lane 0" << std::endl;
-        	            change_state = -1;
+        	            //Obstacle: Keep lane
+                        std::cout << "Keep lane 0"<< std::endl;
+                        keep_0 = 1;
         	         }
           	      
           	      }  //end if
@@ -348,7 +345,7 @@ int main() {
           	       if(d< (2+4*(lane-1)+2) && d > (2+4*(lane-1)-2))
           	       {
           	        
-          	         std::cout << "In lane_1, check lane_0 " << std::endl;
+          	         std::cout << "In lane 1. Check lane 0 " << std::endl;
           	         double vx = sensor_fusion[i][3];
          	         double vy = sensor_fusion[i][4];
          	         double check_speed = sqrt(vx*vx + vy*vy);
@@ -361,14 +358,9 @@ int main() {
           	         //check the gap
         	         if((gap_s > -10.0) && (gap_s < 30.0))
         	         {
-        	           //I can change to lane 1
-                       std::cout << "Change from 1 to 0" << std::endl;
-                       change_state = 0;
-        	         }
-        	         //else I stay....
-        	         else
-        	         {
-        	           std::cout << "Check lane 2" << std::endl;
+        	           //Obstacle: Keep lane
+                       std::cout << "Keep lane 1" << std::endl;
+                       keep_10 = 1;
         	         }
           	                 	        
           	        } //end if
@@ -376,7 +368,7 @@ int main() {
           	        //Else check lane 2
           	        else if(d< (2+4*(lane+1)+2) && d > (2+4*(lane+1)-2)) 
           	        {
-          	          std::cout << "In lane_1, check lane_2 " << std::endl;
+          	          std::cout << "In lane 1. Check lane 2 " << std::endl;
           	          double vx = sensor_fusion[i][3];
          	          double vy = sensor_fusion[i][4];
          	          double check_speed = sqrt(vx*vx + vy*vy);
@@ -389,15 +381,9 @@ int main() {
           	          //check the gap
         	          if((gap_s > -10.0) && (gap_s < 30.0))
         	          {
-        	            //I can change to lane 1
-                        std::cout << "Change from 1 to 2" << std::endl;
-                        change_state = 2;
-        	          }
-        	          //else I stay....
-        	          else
-        	          {
-        	            std::cout << "Stay in lane 1" << std::endl;
-        	            change_state = -1;
+        	            //Obstacle: Keep lane
+                        std::cout << "Keep lane 1" << std::endl;
+                        keep_12 = 1;
         	          }
           	        }  //end else if
           	     } //end if lan 1
@@ -408,7 +394,7 @@ int main() {
           	        //See if I can go to lane 1
           	        if(d< (2+4*(lane-1)+2) && d > (2+4*(lane-1)-2))
           	        {
-          	          std::cout << "In lane_2, check lane_1 " << std::endl;
+          	          std::cout << "In lane 2. Check lane 1 " << std::endl;
           	          double vx = sensor_fusion[i][3];
          	          double vy = sensor_fusion[i][4];
          	          double check_speed = sqrt(vx*vx + vy*vy);
@@ -421,15 +407,9 @@ int main() {
           	          //check the gap
         	          if((gap_s > -10.0) && (gap_s < 30.0))
         	          {
-        	            //I can change to lane 1
-                        std::cout << "Change from 2 to 1" << std::endl;
-                        change_state = 1;
-        	          }
-        	          //else I stay....
-        	          else
-        	          {
-        	            std::cout << "Stay in lane 2" << std::endl;
-        	            change_state = -1;
+        	            //Obstacle: Keep lane
+                        std::cout << "Keep lane 2" << std::endl;
+                        keep_2 = 1;
         	          }
           	        } //end if
           	        
@@ -444,43 +424,41 @@ int main() {
           	    //See what state I am to change lane
   				if (lane == 0)
   				{
-  			      if (change_state == 1)
+  				//I can change to lane 1
+  			      if (keep_0 == 0)
   				  {
 				    lane = 1;
 
   				  } 
-  				  //else stay... do nothing
   				}
   				else if(lane == 1)
   				{
-  				  if (change_state == 0)
+  				  //I can change to lane 0
+  				  if (keep_10 == 0)
   				  {	
   				    lane = 0;
 
   				  }
-  				  else if (change_state == 2)
+  				  //I can change to lane 2
+  				  else if (keep_12 == 0)
   				  {	
   				    lane = 2;
 
   				  }
-  				  //else stay... do nothing
   				}
   				else if(lane == 2)
   				{
-  				  if (change_state ==1)
+  				  //I can change to lane 1
+  				  if (keep_2 ==0)
   				  {
   				    lane = 1;
 
   				  }
   					
-  					//else stay... do nothing
   				}
   				
-  				//last:
   				eval_ln_change = false;
-  				//change_state = -1;
-  				//potential_lane_change = false;
-  				cout << "From lane_" << prev_lane << ", Set to lane_" << lane << endl;
+  				cout << "From lane " << prev_lane << ", Go to lane " << lane << endl;
           	    
           	}  //end eval ln change
           	
