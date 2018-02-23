@@ -4,6 +4,7 @@ By Pablo Sauras Perez
 ## Submission code location
 The submited code can be found in the **src** directory. In particular, the following files have been modified:
 - main.cpp
+- spline.h has been included.
 
 ## Important Depencencies
 As stated in the project description, these are the important dependencies.
@@ -27,7 +28,7 @@ As it can be seen in the [results video](https://github.com/pablosaurasperez/Car
 - The car stays in its lane, except for the time between changing lanes.
 - The car is able to change lanes.
 
-##Reflection
+## Reflection
 
 The basic code is based on the guide provided in the lesson.
 
