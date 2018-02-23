@@ -268,7 +268,7 @@ int main() {
          	{
           	  //car is in my lane
          	  float d = sensor_fusion[i][6];
-         	  if(d< (2+4*lane+2) && d > (2+4*lane-2))
+         	  if(d< (2+4*lane+2.5) && d > (2+4*lane-2.5)) //increased the limits to have more buffer...
          	  {
          	    double vx = sensor_fusion[i][3];
          	    double vy = sensor_fusion[i][4];
@@ -474,10 +474,6 @@ int main() {
         	}
         	too_close = false;
           	
-
-
-
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	
           	/************* BEGIN ***********/
           	
