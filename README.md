@@ -18,7 +18,7 @@ As stated in th project description, from the project top directory:
 -   ```./path_planning```
 
 ## Results. Valid trajectory
-As it can be seen in the [results video](https://github.com/pablosaurasperez/CarND-Path-Planning-Project/blob/master/Path_Planning.mov):
+As it can be seen in the [results video](https://github.com/pablosaurasperez/CarND-Path-Planning-Project/blob/master/Path_Planing.mov):
 
 - The car is able to drive at least 4.32 miles without incident.
 - The car drives according to the speed limit.
